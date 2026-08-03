@@ -1,14 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import type { ImplementationPlan, AffectedFile } from "@/types/plan"
+import { getShortRepoName } from "@/lib/utils/github"
 
 interface Props { plan: ImplementationPlan; repoUrl: string }
 
 export default function ImplementationPlanView({ plan, repoUrl }: Props) {
   const [open, setOpen] = useState<Set<string>>(new Set())
-  const toggle = (p: string) => setOpen(s => { const n = new Set(s); n.has(p) ? n.delete(p) : n.add(p); return n })
-  const short = repoUrl.replace(/^https?:\/\/github\.com\//, "")
+
+  const toggle = useCallback((p: string) => {
+    setOpen((s) => {
+      const n = new Set(s)
+      if (n.has(p)) {
+        n.delete(p)
+      } else {
+        n.add(p)
+      }
+      return n
+    })
+  }, [])
+
+  const short = getShortRepoName(repoUrl)
 
   return (
     <div className="u-fade-in flex flex-col gap-2.5">
@@ -42,7 +55,7 @@ export default function ImplementationPlanView({ plan, repoUrl }: Props) {
 
       <Sec label="Files" count={plan.affectedFiles.length}>
         <div className="flex flex-col gap-[5px]">
-          {plan.affectedFiles.map(f => (
+          {plan.affectedFiles.map((f) => (
             <FileRow key={f.path} file={f} isOpen={open.has(f.path)} onToggle={() => toggle(f.path)} />
           ))}
         </div>
@@ -69,7 +82,7 @@ export default function ImplementationPlanView({ plan, repoUrl }: Props) {
               </p>
               {step.files.length > 0 && (
                 <div className="flex gap-1 flex-wrap">
-                  {step.files.map(f => (
+                  {step.files.map((f) => (
                     <span key={f} className="mono text-[0.68rem] text-[var(--text-3)] bg-[var(--bg-sunken)] border border-[var(--border)] rounded px-[7px] py-[2px]">
                       {f}
                     </span>
@@ -131,6 +144,7 @@ function FileRow({ file, isOpen, onToggle }: { file: AffectedFile; isOpen: boole
   return (
     <div className="border border-[var(--border)] rounded-[var(--r-sm)] overflow-hidden">
       <button
+        type="button"
         onClick={onToggle}
         className={`w-full border-none cursor-pointer p-[10px_14px] flex items-center gap-[9px] text-left transition-colors duration-150 ${
           isOpen ? "bg-[var(--bg-sunken)]" : "bg-[var(--bg-raised)]"

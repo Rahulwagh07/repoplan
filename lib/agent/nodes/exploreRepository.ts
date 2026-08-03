@@ -5,6 +5,7 @@ import {
   ToolMessage,
 } from "@langchain/core/messages"
 import type { BaseMessage } from "@langchain/core/messages"
+import type { StructuredToolInterface } from "@langchain/core/tools"
 import { getLLM } from "@/lib/llm/client"
 import { createGithubTools } from "@/lib/github/tools"
 import type { RepoPlanState } from "../state"
@@ -19,7 +20,9 @@ export async function exploreRepository(
 
   const tools = createGithubTools(repo.owner, repo.name, repo.defaultBranch)
   const llm = getLLM().bindTools(tools)
-  const toolsByName = Object.fromEntries(tools.map((t) => [t.name, t]))
+  const toolsByName: Record<string, StructuredToolInterface> = Object.fromEntries(
+    tools.map((t) => [t.name, t])
+  )
 
   const newSearches: SearchEntry[] = []
   const newInspectedFiles: InspectedFile[] = []
@@ -93,8 +96,8 @@ export async function exploreRepository(
 
       let toolResult: string
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        toolResult = await (tool as any).invoke(toolCall.args)
+        const res = await tool.invoke(toolCall.args)
+        toolResult = typeof res === "string" ? res : JSON.stringify(res)
       } catch (err) {
         toolResult = `Error: ${err instanceof Error ? err.message : String(err)}`
       }
@@ -116,7 +119,7 @@ export async function exploreRepository(
       } else if (toolCall.name === "read_file") {
         const path = toolCall.args.path as string
         if (!toolResult.startsWith("File not found")) {
-          const reason = extractReasonFromMessages(messages, path)
+          const reason = extractReasonFromMessages(messages)
           newInspectedFiles.push({
             path,
             content: toolResult,
@@ -129,7 +132,9 @@ export async function exploreRepository(
     }
   }
 
-  progressEvents.push(`✓ Repository exploration complete (${toolCallCount} tool calls, ${newInspectedFiles.length} files read)`)
+  progressEvents.push(
+    `✓ Repository exploration complete (${toolCallCount} tool calls, ${newInspectedFiles.length} files read)`
+  )
 
   return {
     searches: newSearches,
@@ -180,10 +185,7 @@ function parseSearchResults(
   return results
 }
 
-function extractReasonFromMessages(
-  messages: BaseMessage[],
-  _path: string
-): string {
+function extractReasonFromMessages(messages: BaseMessage[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i]
     if (msg instanceof AIMessage && typeof msg.content === "string" && msg.content.trim()) {

@@ -6,8 +6,7 @@ import { analyzeContext } from "./nodes/analyzeContext"
 import { generatePlan } from "./nodes/generatePlan"
 import { critiquePlan } from "./nodes/critiquePlan"
 import { finalizePlan } from "./nodes/finalizePlan"
-
-const MAX_ITERATIONS = 3
+import { MAX_ITERATIONS } from "./constants"
 
 function routeAfterCritique(
   state: RepoPlanState

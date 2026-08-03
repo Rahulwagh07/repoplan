@@ -2,6 +2,7 @@ import { z } from "zod"
 import { HumanMessage, SystemMessage } from "@langchain/core/messages"
 import { getStructuredLLM } from "@/lib/llm/client"
 import type { RepoPlanState } from "../state"
+import { MAX_ITERATIONS } from "../constants"
 
 const FinalPlanSchema = z.object({
   summary: z.string(),
@@ -41,7 +42,7 @@ export async function finalizePlan(
     throw new Error("Cannot finalize: no draft plan exists")
   }
 
-  const maxIterationsReached = state.iteration >= 3
+  const maxIterationsReached = state.iteration >= MAX_ITERATIONS
 
   const llm = getStructuredLLM(FinalPlanSchema)
 

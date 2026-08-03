@@ -3,6 +3,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages"
 import { getStructuredLLM } from "@/lib/llm/client"
 import { getIssue } from "@/lib/github/repository"
 import type { RepoPlanState } from "../state"
+import { parseGithubIssueUrl } from "@/lib/utils/github"
 
 const TaskAnalysisSchema = z.object({
   objective: z.string().describe("Clear one-sentence objective of the task"),
@@ -20,19 +21,15 @@ export async function understandTask(
   const { task, repo } = state
   let resolvedTask = task
 
-  const issueUrlMatch = task.match(
-    /github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/
-  )
-
-  if (issueUrlMatch) {
-    const [, issueOwner, issueRepo, issueNum] = issueUrlMatch
+  const parsedIssue = parseGithubIssueUrl(task)
+  if (parsedIssue) {
     const issue = await getIssue(
-      issueOwner,
-      issueRepo,
-      parseInt(issueNum, 10)
+      parsedIssue.owner,
+      parsedIssue.repo,
+      parsedIssue.issueNumber
     )
     if (issue) {
-      resolvedTask = `Issue #${issueNum}: ${issue.title}\n\n${issue.body}`
+      resolvedTask = `Issue #${parsedIssue.issueNumber}: ${issue.title}\n\n${issue.body}`
     }
   }
 

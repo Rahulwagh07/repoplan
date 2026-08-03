@@ -5,16 +5,17 @@ import RepositoryForm from "@/components/RepositoryForm"
 import AnalysisProgress from "@/components/AnalysisProgress"
 import ImplementationPlanView from "@/components/ImplementationPlanView"
 import type { ImplementationPlan, ProgressEvent } from "@/types/plan"
+import { getShortRepoName } from "@/lib/utils/github"
 
-type S = "idle" | "analyzing" | "complete" | "error"
+type StateType = "idle" | "analyzing" | "complete" | "error"
 
 export default function Home() {
-  const [state, setState] = useState<S>("idle")
+  const [state, setState] = useState<StateType>("idle")
   const [events, setEvents] = useState<string[]>([])
   const [plan, setPlan] = useState<ImplementationPlan | null>(null)
   const [error, setError] = useState("")
   const [repo, setRepo] = useState("")
-  const ref = useRef<S>("idle")
+  const ref = useRef<StateType>("idle")
 
   const analyze = useCallback(async (repoUrl: string, task: string) => {
     ref.current = "analyzing"
@@ -43,36 +44,44 @@ export default function Home() {
         const parts = buf.split("\n\n")
         buf = parts.pop() ?? ""
         for (const p of parts) {
-          const line = p.split("\n").find(l => l.startsWith("data: "))
+          const line = p.split("\n").find((l) => l.startsWith("data: "))
           if (!line) continue
           try {
             const ev: ProgressEvent = JSON.parse(line.slice(6))
-            if (ev.type === "progress") setEvents(x => [...x, ev.message])
+            if (ev.type === "progress") setEvents((x) => [...x, ev.message])
             else if (ev.type === "complete") {
               setPlan(ev.plan)
-              setEvents(x => [...x, "✓ Plan ready"])
-              ref.current = "complete"; setState("complete")
+              setEvents((x) => [...x, "✓ Plan ready"])
+              ref.current = "complete"
+              setState("complete")
             } else if (ev.type === "error") {
               setError(ev.message)
-              setEvents(x => [...x, `✗ ${ev.message}`])
-              ref.current = "error"; setState("error")
+              setEvents((x) => [...x, `✗ ${ev.message}`])
+              ref.current = "error"
+              setState("error")
             }
           } catch {}
         }
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unexpected error"
-      setError(msg); setEvents(x => [...x, `✗ ${msg}`])
-      ref.current = "error"; setState("error")
+      setError(msg)
+      setEvents((x) => [...x, `✗ ${msg}`])
+      ref.current = "error"
+      setState("error")
     }
   }, [])
 
-  const reset = () => {
-    ref.current = "idle"; setState("idle")
-    setEvents([]); setPlan(null); setError(""); setRepo("")
-  }
+  const reset = useCallback(() => {
+    ref.current = "idle"
+    setState("idle")
+    setEvents([])
+    setPlan(null)
+    setError("")
+    setRepo("")
+  }, [])
 
-  const shortRepo = repo.replace(/^https?:\/\/github\.com\//, "")
+  const shortRepo = getShortRepoName(repo)
 
   return (
     <>
@@ -91,7 +100,11 @@ export default function Home() {
 
           <div className="flex items-center gap-2">
             {(state === "complete" || state === "error") && (
-              <button className="btn btn-outline text-[0.78rem] px-[15px] py-[6px]" onClick={reset}>
+              <button
+                type="button"
+                className="btn btn-outline text-[0.78rem] px-[15px] py-[6px]"
+                onClick={reset}
+              >
                 ← New analysis
               </button>
             )}

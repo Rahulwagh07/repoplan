@@ -2,6 +2,7 @@ import { z } from "zod"
 import { HumanMessage, SystemMessage } from "@langchain/core/messages"
 import { getStructuredLLM } from "@/lib/llm/client"
 import type { RepoPlanState } from "../state"
+import { MAX_ITERATIONS } from "../constants"
 
 const CritiqueSchema = z.object({
   approved: z
@@ -34,7 +35,7 @@ export async function critiquePlan(
     }
   }
 
-  if (iteration >= 3) {
+  if (iteration >= MAX_ITERATIONS) {
     return {
       critique: {
         approved: true,

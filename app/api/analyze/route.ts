@@ -2,24 +2,17 @@ import { getGraph } from "@/lib/agent/graph"
 import { getRepoMetadata } from "@/lib/github/repository"
 import { GitHubError } from "@/lib/github/repository"
 import type { ProgressEvent } from "@/types/plan"
+import { parseGithubUrl } from "@/lib/utils/github"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
-
-function parseGithubUrl(url: string): { owner: string; name: string } | null {
-  const match = url.trim().match(
-    /^(?:https?:\/\/)?github\.com\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+?)(?:\.git)?(?:\/.*)?$/
-  )
-  if (!match) return null
-  return { owner: match[1], name: match[2] }
-}
 
 function encodeSSE(event: ProgressEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`
 }
 
 export async function POST(req: Request) {
-  const { repoUrl, task } = await req.json() as { repoUrl: string; task: string }
+  const { repoUrl, task } = (await req.json()) as { repoUrl: string; task: string }
 
   if (!repoUrl || !task) {
     return new Response(
